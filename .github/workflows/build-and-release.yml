@@ -14,7 +14,6 @@ jobs:
 
       - name: Build
         run: |
-          apt update && apt install -y jq
           mkdir -p build
           for PACK in $(ls); do
             cd $PACK
