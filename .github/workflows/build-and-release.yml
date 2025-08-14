@@ -14,6 +14,8 @@ jobs:
 
       - name: Build
         run: |
+          pwd
+          ls -lah
           for PACK in $(ls); do
             cd $PACK
             jq ".version |= \"$(echo $GITHUB_REF_NAME | sed 's/v//')\"" package.json > package.json.tmp
