@@ -14,12 +14,11 @@ jobs:
 
       - name: Build
         run: |
-          mkdir -p build
           for PACK in $(ls); do
             cd $PACK
             jq ".version |= \"$(echo $GITHUB_REF_NAME | sed 's/v//')\"" package.json > package.json.tmp
             mv package.json.tmp package.json
-            tar -czf ../build/${PACK}.crbl .
+            tar -czf ../${PACK}.crbl .
           done
 
       - name: Release
