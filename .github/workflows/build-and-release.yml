@@ -21,7 +21,7 @@ jobs:
           for PACK in $(ls); do
             jq ".version |= \"$(echo $GITHUB_REF_NAME | sed 's/v//')\"" $PACK/package.json > $PACK/package.json.tmp
             mv $PACK/package.json.tmp $PACK/package.json
-            tar -czvf $PACK.crbl --strip-components 1 $PACK/
+            tar -czvf $PACK.crbl -C $PACK/ .
           done
 
       - name: Release
@@ -32,4 +32,4 @@ jobs:
             *.crbl
 
       - run: |
-          echo ${{ steps.release.outputs }}
+          echo ${{ toJSON(steps.release.outputs) }}
