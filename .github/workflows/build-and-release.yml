@@ -32,4 +32,4 @@ jobs:
             *.crbl
 
       - run: |
-          echo ${{ toJSON(steps.release.outputs) }}
+          echo '${{ toJSON(steps.release.outputs) }}'
