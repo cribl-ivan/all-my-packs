@@ -17,10 +17,9 @@ jobs:
           pwd
           ls -lah
           for PACK in $(ls); do
-            cd $PACK
-            jq ".version |= \"$(echo $GITHUB_REF_NAME | sed 's/v//')\"" package.json > package.json.tmp
-            mv package.json.tmp package.json
-            tar -czf ../${PACK}.crbl .
+            jq ".version |= \"$(echo $GITHUB_REF_NAME | sed 's/v//')\"" $PACK/package.json > $PACK/package.json.tmp
+            mv $PACK/package.json.tmp $PACK/package.json
+            tar -czf --strip-components 1 ${PACK}.crbl $PACK/
           done
 
       - name: Release
