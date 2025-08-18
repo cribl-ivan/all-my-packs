@@ -88,7 +88,6 @@ jobs:
 
           for PACK_URL in $(echo "$RELEASE_RESPONSE_BODY" | jq -r '.assets[] | select(.name | endswith(".crbl")) | .browser_download_url'); do
             PACK_NAME=$(basename "$PACK_URL" .crbl)
-            PACK_URL_$PACK_NAME='$PACK_URL'
 
             echo "Pack URL for $PACK_NAME: $PACK_URL_$PACK_NAME"
             
