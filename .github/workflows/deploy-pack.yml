@@ -112,7 +112,7 @@ jobs:
               echo "Deploying $PACK to worker group $WORKER_GROUP"
 
               WG_ENDPOINT="$API_BASE_URI/$WORKER_GROUP/packs"
-              INSTALL_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$WG_ENDPOINT" \
+              INSTALL_RESPONSE=$(curl -w "\n%{http_code}" -X POST "$WG_ENDPOINT" \
                                 -H "$AUTH_HEADER" \
                                 -H 'Content-Type: application/json' \
                                 -d "{\"source\": \"$PACK_REPO_URL\",\"force\":true,\"spec\":\"$GITHUB_REF_NAME\",\"allowCustomFunctions\":false}")
