@@ -1,0 +1,89 @@
+name: deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      worker_group:
+        description: 'Worker group to deploy the pack to (space-separated list)'
+        required: true
+        default: 'default'
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: login to Cribl (on-prem)
+        if: ${{ secrets.PACK_DEPLOYER_PASSWORD && vars.LEADER_BASE_URI }}
+        env:
+          PASSWORD: ${{ secrets.PACK_DEPLOYER_PASSWORD }}
+          LEADER_BASE_URI: ${{ vars.LEADER_BASE_URI }}
+        run: |
+          TOKEN=$(curl $LEADER_BASE_URI/api/v1/auth/login \
+               -H 'Content-Type: application/json' \
+               -d "{\"username\":\"pack_deploy\",\"password\":\"$PASSWORD\"}" 2>/dev/null | \
+               jq -r .token)
+          
+          # Set up the Authentication Header
+          export AUTH_HEADER="Authorization: Bearer $TOKEN"
+          export API_BASE_URI="$LEADER_BASE_URI/api/v1/m"
+
+      - name: login to Cribl (Cloud)
+        if: ${{ vars.CRIBL_CLIENT_ID && secrets.CRIBL_CLIENT_SECRET && vars.CRIBL_ORG }}
+        env:
+          CRIBL_CLIENT_SECRET: ${{ secrets.CRIBL_CLIENT_SECRET }}
+          CRIBL_CLIENT_ID: ${{ vars.CRIBL_CLIENT_ID }}
+          CRIBL_ORG: ${{ vars.CRIBL_ORG }}
+        run: |
+          AUTH_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "https://login.cribl.cloud/oauth/token" \
+                          -H "Content-Type: application/json" \
+                          -d "{\"grant_type\": \"client_credentials\",\"client_id\": \"$CRIBL_CLIENT_ID\", \"client_secret\": \"$CRIBL_CLIENT_SECRET\", \"audience\": \"https://api.cribl.cloud\"}" \
+                          || exit 1)
+          
+          AUTH_HTTP_CODE=$(echo "$AUTH_RESPONSE" | tail -n1)
+          ACCESS_TOKEN=$(echo "$AUTH_RESPONSE" | sed '$d' | jq -r '.access_token')
+          
+          # Checks if the authentication request was successful
+          if [ "$AUTH_HTTP_CODE" -eq 200 ]; then
+            echo "Request succeeded with status code $AUTH_HTTP_CODE."
+            echo "----------------------------------------"
+          else
+            echo "Request failed with status code $AUTH_HTTP_CODE."
+            echo "----------------------------------------"
+            # Exit on the first non-200 response
+            exit 1
+          fi
+
+          # Set up the Authentication Header
+          export AUTH_HEADER="Authorization: Bearer $ACCESS_TOKEN"
+          export API_BASE_URI="https://$CRIBL_ORG.cribl.cloud/api/v1/m"
+
+      - name: Deploy pack(s)
+        run: |
+          for WORKER_GROUP in ${{ inputs.worker_group }}; do
+            echo "Deploying $PACK to worker group $WORKER_GROUP"
+
+            WG_ENDPOINT="$API_BASE_URI/$WORKER_GROUP/packs"
+            INSTALL_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$WG_ENDPOINT" \
+                              -H "$AUTH_HEADER" \
+                              -H 'Content-Type: application/json' \
+                              -d "{\"source\": \"$PACK_REPO_URL\",\"force\":true,\"spec\":\"$GITHUB_REF_NAME\",\"allowCustomFunctions\":false}" \
+                              || exit 1)
+            INSTALL_HTTP_CODE=$(echo "$INSTALL_RESPONSE" | tail -n1)
+            INSTALL_RESPONSE_BODY=$(echo "$INSTALL_RESPONSE" | sed '$d')
+            INSTALL_PACK_ID=$(echo "$INSTALL_RESPONSE_BODY" | jq -r '.items[0].id')
+            INSTALL_PACK_VERSION=$(echo "$INSTALL_RESPONSE_BODY" | jq -r '.items[0].version')
+
+            # Checks if the pack installation request was successful
+            if [ "$INSTALL_HTTP_CODE" -eq 200 ]; then
+                echo "Pack install request succeeded with status code $INSTALL_HTTP_CODE."
+                echo "The pack: $INSTALL_PACK_ID version: $INSTALL_PACK_VERSION was installed to worker group: $WORKER_GROUP."
+                echo "----------------------------------------"
+            else
+                echo "Pack install request failed with status code $INSTALL_HTTP_CODE."
+                echo "----------------------------------------"
+                # Exit on the first non-200 response
+                exit 1
+            fi
+          done
