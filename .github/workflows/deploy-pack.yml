@@ -115,8 +115,10 @@ jobs:
               INSTALL_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$WG_ENDPOINT" \
                                 -H "$AUTH_HEADER" \
                                 -H 'Content-Type: application/json' \
-                                -d "{\"source\": \"$PACK_REPO_URL\",\"force\":true,\"spec\":\"$GITHUB_REF_NAME\",\"allowCustomFunctions\":false}" \
-                                || exit 1)
+                                -d "{\"source\": \"$PACK_REPO_URL\",\"force\":true,\"spec\":\"$GITHUB_REF_NAME\",\"allowCustomFunctions\":false}")
+              
+              echo "Install response: $INSTALL_RESPONSE"
+
               INSTALL_HTTP_CODE=$(echo "$INSTALL_RESPONSE" | tail -n1)
               INSTALL_RESPONSE_BODY=$(echo "$INSTALL_RESPONSE" | sed '$d')
               INSTALL_PACK_ID=$(echo "$INSTALL_RESPONSE_BODY" | jq -r '.items[0].id')
