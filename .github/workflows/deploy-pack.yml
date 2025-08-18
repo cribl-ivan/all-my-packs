@@ -31,8 +31,8 @@ jobs:
                jq -r .token)
           
           # Set up the Authentication Header
-          export AUTH_HEADER="Authorization: Bearer $TOKEN"
-          export API_BASE_URI="$LEADER_BASE_URI/api/v1/m"
+          echo "AUTH_HEADER=Authorization: Bearer $TOKEN" >> $GITHUB_ENV
+          echo "API_BASE_URI=$LEADER_BASE_URI/api/v1/m" >> $GITHUB_ENV
 
       - name: login to Cribl (Cloud)
         if: ${{ vars.CRIBL_CLIENT_ID && vars.CRIBL_ORG }}
@@ -61,8 +61,8 @@ jobs:
           fi
 
           # Set up the Authentication Header
-          export AUTH_HEADER="Authorization: Bearer $ACCESS_TOKEN"
-          export API_BASE_URI="https://$CRIBL_ORG.cribl.cloud/api/v1/m"
+          echo "AUTH_HEADER=Authorization: Bearer $ACCESS_TOKEN" >> $GITHUB_ENV
+          echo "API_BASE_URI=https://$CRIBL_ORG.cribl.cloud/api/v1/m" >> $GITHUB_ENV
 
       - name: Get list of pack asset URLs from release
         id: get_pack_urls
