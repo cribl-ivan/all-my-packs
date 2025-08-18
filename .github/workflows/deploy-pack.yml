@@ -78,25 +78,22 @@ jobs:
           RELEASE_HTTP_CODE=$(echo "$RELEASE_RESP" | tail -n1)
           RELEASE_RESPONSE_BODY=$(echo "$RELEASE_RESP" | sed '$d')
 
-          echo "Release response: $RELEASE_RESPONSE_BODY"
-
           for PACK_URL in $(echo "$RELEASE_RESPONSE_BODY" | jq -r '.assets[] | select(.name | endswith(".crbl")) | .browser_download_url'); do
             PACK_NAME=$(basename "$PACK_URL" .crbl)
 
-            echo "Pack URL for $PACK_NAME: $PACK_URL"
+            echo "Pack URL for '$PACK_NAME': $PACK_URL"
             
             if [ '${{ inputs.packs }}' == '*' ]; then
               PACKS_TO_DEPLOY+="$PACK_URL "
-              echo "Adding $PACK_NAME to packs to deploy"
+              echo "Adding '$PACK_NAME' to list of packs to deploy"
             else
               if [[ "${{ inputs.packs }}" =~ "$PACK_NAME" ]]; then
                 PACKS_TO_DEPLOY+="$PACK_URL "
-                echo "Adding $PACK_NAME to packs to deploy"
+                echo "Adding '$PACK_NAME' to list of packs to deploy"
               fi
             fi
           done
 
-          echo "Packs to deploy: $PACKS_TO_DEPLOY"
           echo "PACKS_TO_DEPLOY=$PACKS_TO_DEPLOY" >> $GITHUB_ENV
 
       - name: Deploy pack(s)
@@ -106,19 +103,15 @@ jobs:
           for PACK_REPO_URL in $PACKS_TO_DEPLOY; do
             PACK=$(basename "$PACK_REPO_URL" .crbl)
 
-            echo "Deploying pack: $PACK from URL: $PACK_REPO_URL"
-            
             for WORKER_GROUP in ${{ inputs.worker_group }}; do
               echo "Deploying $PACK to worker group $WORKER_GROUP"
 
               WG_ENDPOINT="$API_BASE_URI/$WORKER_GROUP/packs"
-              INSTALL_RESPONSE=$(curl -w "\n%{http_code}" -X POST "$WG_ENDPOINT" \
+              INSTALL_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$WG_ENDPOINT" \
                                 -H "$AUTH_HEADER" \
                                 -H 'Content-Type: application/json' \
                                 -d "{\"source\": \"$PACK_REPO_URL\",\"force\":true,\"spec\":\"$GITHUB_REF_NAME\",\"allowCustomFunctions\":false}")
               
-              echo "Install response: $INSTALL_RESPONSE"
-
               INSTALL_HTTP_CODE=$(echo "$INSTALL_RESPONSE" | tail -n1)
               INSTALL_RESPONSE_BODY=$(echo "$INSTALL_RESPONSE" | sed '$d')
               INSTALL_PACK_ID=$(echo "$INSTALL_RESPONSE_BODY" | jq -r '.items[0].id')
