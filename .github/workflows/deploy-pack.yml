@@ -1,4 +1,4 @@
-name: deploy
+name: Deploy pack(s) to Cribl Worker Groups
 
 on:
   workflow_dispatch:
@@ -7,6 +7,11 @@ on:
         description: 'Worker group to deploy the pack to (space-separated list)'
         required: true
         default: 'default'
+        type: string
+      packs:
+        description: 'Packs to deploy (space-separated list or * for all packs in the repo)'
+        required: true
+        default: '*'
         type: string
 
 jobs:
@@ -59,31 +64,61 @@ jobs:
           export AUTH_HEADER="Authorization: Bearer $ACCESS_TOKEN"
           export API_BASE_URI="https://$CRIBL_ORG.cribl.cloud/api/v1/m"
 
+      - name: Get list of pack asset URLs from release
+        id: get_pack_urls
+        run: |
+          RELEASE_RESP=$(curl -L -s -w "\n%{http_code}" \
+                        -H "Accept: application/vnd.github+json" \
+                        -H "Authorization: Bearer <YOUR-TOKEN>" \
+                        -H "X-GitHub-Api-Version: 2022-11-28" \
+                        $GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases/tags/$GITHUB_REF_NAME \
+                        || exit 1)
+          RELEASE_HTTP_CODE=$(echo "$INSTALL_RESPONSE" | tail -n1)
+          RELEASE_RESPONSE_BODY=$(echo "$INSTALL_RESPONSE" | sed '$d')
+
+          for PACK_URL in $(echo "$RELEASE_RESPONSE_BODY" | jq -r '.assets[] | select(.name | endswith(".crbl")) | .browser_download_url'); do
+            if ${{ inputs.packs }} == '*'; then
+              PACK_REPO_URL_ALL=$PACK_REPO_URL_ALL $PACK_URL
+            else
+              PACK_NAME=$(basename "$PACK_URL" .crbl)
+              echo "PACK_URL_$PACK_NAME=$PACK_URL" >> $GITHUB_ENV
+            fi
+          done
+
       - name: Deploy pack(s)
         run: |
-          for WORKER_GROUP in ${{ inputs.worker_group }}; do
-            echo "Deploying $PACK to worker group $WORKER_GROUP"
-
-            WG_ENDPOINT="$API_BASE_URI/$WORKER_GROUP/packs"
-            INSTALL_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$WG_ENDPOINT" \
-                              -H "$AUTH_HEADER" \
-                              -H 'Content-Type: application/json' \
-                              -d "{\"source\": \"$PACK_REPO_URL\",\"force\":true,\"spec\":\"$GITHUB_REF_NAME\",\"allowCustomFunctions\":false}" \
-                              || exit 1)
-            INSTALL_HTTP_CODE=$(echo "$INSTALL_RESPONSE" | tail -n1)
-            INSTALL_RESPONSE_BODY=$(echo "$INSTALL_RESPONSE" | sed '$d')
-            INSTALL_PACK_ID=$(echo "$INSTALL_RESPONSE_BODY" | jq -r '.items[0].id')
-            INSTALL_PACK_VERSION=$(echo "$INSTALL_RESPONSE_BODY" | jq -r '.items[0].version')
-
-            # Checks if the pack installation request was successful
-            if [ "$INSTALL_HTTP_CODE" -eq 200 ]; then
-                echo "Pack install request succeeded with status code $INSTALL_HTTP_CODE."
-                echo "The pack: $INSTALL_PACK_ID version: $INSTALL_PACK_VERSION was installed to worker group: $WORKER_GROUP."
-                echo "----------------------------------------"
+          for PACK in ${{ inputs.packs }}; do
+            if [ "$PACK" == "*" ]; then
+              PACK_REPO_URL=$PACK_REPO_URL_ALL
             else
-                echo "Pack install request failed with status code $INSTALL_HTTP_CODE."
-                echo "----------------------------------------"
-                # Exit on the first non-200 response
-                exit 1
+              PACK_REPO_URL=$PACK_URL_$PACK
             fi
+
+            for WORKER_GROUP in ${{ inputs.worker_group }}; do
+              echo "Deploying $PACK to worker group $WORKER_GROUP"
+
+              WG_ENDPOINT="$API_BASE_URI/$WORKER_GROUP/packs"
+              INSTALL_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$WG_ENDPOINT" \
+                                -H "$AUTH_HEADER" \
+                                -H 'Content-Type: application/json' \
+                                -d "{\"source\": \"$PACK_REPO_URL\",\"force\":true,\"spec\":\"$GITHUB_REF_NAME\",\"allowCustomFunctions\":false}" \
+                                || exit 1)
+              INSTALL_HTTP_CODE=$(echo "$INSTALL_RESPONSE" | tail -n1)
+              INSTALL_RESPONSE_BODY=$(echo "$INSTALL_RESPONSE" | sed '$d')
+              INSTALL_PACK_ID=$(echo "$INSTALL_RESPONSE_BODY" | jq -r '.items[0].id')
+              INSTALL_PACK_VERSION=$(echo "$INSTALL_RESPONSE_BODY" | jq -r '.items[0].version')
+
+              # Checks if the pack installation request was successful
+              if [ "$INSTALL_HTTP_CODE" -eq 200 ]; then
+                  echo "Pack install request succeeded with status code $INSTALL_HTTP_CODE."
+                  echo "The pack: $INSTALL_PACK_ID version: $INSTALL_PACK_VERSION was installed to worker group: $WORKER_GROUP."
+                  echo "----------------------------------------"
+              else
+                  echo "Pack install request failed with status code $INSTALL_HTTP_CODE:"
+                  echo $INSTALL_RESPONSE_BODY
+                  echo "----------------------------------------"
+                  # Exit on the first non-200 response
+                  exit 1
+              fi
+            done
           done
