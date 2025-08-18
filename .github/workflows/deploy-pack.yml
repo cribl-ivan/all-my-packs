@@ -77,22 +77,20 @@ jobs:
           RELEASE_RESPONSE_BODY=$(echo "$INSTALL_RESPONSE" | sed '$d')
 
           for PACK_URL in $(echo "$RELEASE_RESPONSE_BODY" | jq -r '.assets[] | select(.name | endswith(".crbl")) | .browser_download_url'); do
-            if ${{ inputs.packs }} == '*'; then
-              PACK_REPO_URL_ALL=$PACK_REPO_URL_ALL $PACK_URL
+            PACK_NAME=$(basename "$PACK_URL" .crbl)
+            PACK_URL_$PACK_NAME=$PACK_URL
+            
+            if [ '${{ inputs.packs }}' == '*' ]; then
+              PACKS_TO_DEPLOY="$PACKS_TO_DEPLOY $PACK_NAME"
             else
-              PACK_NAME=$(basename "$PACK_URL" .crbl)
-              echo "PACK_URL_$PACK_NAME=$PACK_URL" >> $GITHUB_ENV
+              PACKS_TO_DEPLOY="${{ inputs.packs }}"
             fi
           done
 
       - name: Deploy pack(s)
         run: |
-          for PACK in ${{ inputs.packs }}; do
-            if [ "$PACK" == "*" ]; then
-              PACK_REPO_URL=$PACK_REPO_URL_ALL
-            else
-              PACK_REPO_URL=$PACK_URL_$PACK
-            fi
+          for PACK in $PACKS_TO_DEPLOY; do
+            PACK_REPO_URL=$PACK_URL_$PACK
 
             for WORKER_GROUP in ${{ inputs.worker_group }}; do
               echo "Deploying $PACK to worker group $WORKER_GROUP"
