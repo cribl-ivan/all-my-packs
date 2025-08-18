@@ -15,7 +15,7 @@ jobs:
     environment: production
     steps:
       - name: login to Cribl (on-prem)
-        if: ${{ secrets.PACK_DEPLOYER_PASSWORD && vars.LEADER_BASE_URI }}
+        if: ${{ vars.LEADER_BASE_URI }}
         env:
           PASSWORD: ${{ secrets.PACK_DEPLOYER_PASSWORD }}
           LEADER_BASE_URI: ${{ vars.LEADER_BASE_URI }}
@@ -30,7 +30,7 @@ jobs:
           export API_BASE_URI="$LEADER_BASE_URI/api/v1/m"
 
       - name: login to Cribl (Cloud)
-        if: ${{ vars.CRIBL_CLIENT_ID && secrets.CRIBL_CLIENT_SECRET && vars.CRIBL_ORG }}
+        if: ${{ vars.CRIBL_CLIENT_ID && vars.CRIBL_ORG }}
         env:
           CRIBL_CLIENT_SECRET: ${{ secrets.CRIBL_CLIENT_SECRET }}
           CRIBL_CLIENT_ID: ${{ vars.CRIBL_CLIENT_ID }}
