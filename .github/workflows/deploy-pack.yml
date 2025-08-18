@@ -69,12 +69,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          curl -L -v -w "\n%{http_code}" \
-                        -H "Accept: application/vnd.github+json" \
-                        -H "Authorization: Bearer $GITHUB_TOKEN" \
-                        -H "X-GitHub-Api-Version: 2022-11-28" \
-                        $GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases/tags/$GITHUB_REF_NAME
-
           RELEASE_RESP=$(curl -L -s -w "\n%{http_code}" \
                         -H "Accept: application/vnd.github+json" \
                         -H "Authorization: Bearer $GITHUB_TOKEN" \
@@ -89,7 +83,7 @@ jobs:
           for PACK_URL in $(echo "$RELEASE_RESPONSE_BODY" | jq -r '.assets[] | select(.name | endswith(".crbl")) | .browser_download_url'); do
             PACK_NAME=$(basename "$PACK_URL" .crbl)
 
-            echo "Pack URL for $PACK_NAME: $PACK_URL_$PACK_NAME"
+            echo "Pack URL for $PACK_NAME: $PACK_URL"
             
             if [ '${{ inputs.packs }}' == '*' ]; then
               PACKS_TO_DEPLOY="$PACKS_TO_DEPLOY $PACK_URL"
@@ -103,6 +97,7 @@ jobs:
           done
 
           echo "Packs to deploy: $PACKS_TO_DEPLOY"
+          echo $PACKS_TO_DEPLOY >> $GITHUB_ENV
 
       - name: Deploy pack(s)
         run: |
