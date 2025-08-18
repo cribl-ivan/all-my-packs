@@ -27,7 +27,7 @@ jobs:
         run: |
           TOKEN=$(curl $LEADER_BASE_URI/api/v1/auth/login \
                -H 'Content-Type: application/json' \
-               -d "{\"username\":\"pack_deploy\",\"password\":\"$PASSWORD\"}" 2>/dev/null | \
+               -d "{\"username\":\"pack_deployer\",\"password\":\"$PASSWORD\"}" 2>/dev/null | \
                jq -r .token)
           
           # Set up the Authentication Header
