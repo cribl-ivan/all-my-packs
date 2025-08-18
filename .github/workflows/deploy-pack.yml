@@ -76,22 +76,34 @@ jobs:
           RELEASE_HTTP_CODE=$(echo "$INSTALL_RESPONSE" | tail -n1)
           RELEASE_RESPONSE_BODY=$(echo "$INSTALL_RESPONSE" | sed '$d')
 
+          echo "Release response: $RELEASE_RESPONSE_BODY"
+
           for PACK_URL in $(echo "$RELEASE_RESPONSE_BODY" | jq -r '.assets[] | select(.name | endswith(".crbl")) | .browser_download_url'); do
             PACK_NAME=$(basename "$PACK_URL" .crbl)
             PACK_URL_$PACK_NAME=$PACK_URL
+
+            echo "Pack URL for $PACK_NAME: $PACK_URL_$PACK_NAME"
             
             if [ '${{ inputs.packs }}' == '*' ]; then
               PACKS_TO_DEPLOY="$PACKS_TO_DEPLOY $PACK_NAME"
+              echo "Adding $PACK_NAME to packs to deploy"
             else
               PACKS_TO_DEPLOY="${{ inputs.packs }}"
+              echo "Using specified packs to deploy: $PACKS_TO_DEPLOY"
             fi
           done
 
+          echo "Packs to deploy: $PACKS_TO_DEPLOY"
+
       - name: Deploy pack(s)
         run: |
+          echo "Deploying packs: $PACKS_TO_DEPLOY"
+
           for PACK in $PACKS_TO_DEPLOY; do
             PACK_REPO_URL=$PACK_URL_$PACK
 
+            echo "Deploying pack: $PACK from URL: $PACK_REPO_URL"
+            
             for WORKER_GROUP in ${{ inputs.worker_group }}; do
               echo "Deploying $PACK to worker group $WORKER_GROUP"
 
