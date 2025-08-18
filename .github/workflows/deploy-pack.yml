@@ -97,7 +97,7 @@ jobs:
           done
 
           echo "Packs to deploy: $PACKS_TO_DEPLOY"
-          echo "PACKS_TO_DEPLOY=\"$PACKS_TO_DEPLOY\" >> $GITHUB_ENV
+          echo "PACKS_TO_DEPLOY=\"$PACKS_TO_DEPLOY\"" >> $GITHUB_ENV
 
       - name: Deploy pack(s)
         run: |
