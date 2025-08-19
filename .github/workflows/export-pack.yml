@@ -66,43 +66,13 @@ jobs:
           echo "AUTH_HEADER=Authorization: Bearer $ACCESS_TOKEN" >> $GITHUB_ENV
           echo "API_BASE_URI=https://$CRIBL_ORG.cribl.cloud/api/v1/m" >> $GITHUB_ENV
 
-      - name: Get list of pack asset URLs from release
-        id: get_pack_urls
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          RELEASE_RESP=$(curl -L -s -w "\n%{http_code}" \
-                        -H "Accept: application/vnd.github+json" \
-                        -H "Authorization: Bearer $GITHUB_TOKEN" \
-                        -H "X-GitHub-Api-Version: 2022-11-28" \
-                        $GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases/tags/$GITHUB_REF_NAME \
-                        || exit 1)
-          RELEASE_HTTP_CODE=$(echo "$RELEASE_RESP" | tail -n1)
-          RELEASE_RESPONSE_BODY=$(echo "$RELEASE_RESP" | sed '$d')
-
-          for PACK_URL in $(echo "$RELEASE_RESPONSE_BODY" | jq -r '.assets[] | select(.name | endswith(".crbl")) | .browser_download_url'); do
-            PACK_NAME=$(basename "$PACK_URL" .crbl)
-
-            echo "Pack URL for '$PACK_NAME': $PACK_URL"
-            
-            if [ '${{ inputs.packs }}' == '*' ]; then
-              PACKS_TO_DEPLOY+="$PACK_URL "
-              echo "Adding '$PACK_NAME' to list of packs to deploy"
-            else
-              if [[ "${{ inputs.packs }}" =~ "$PACK_NAME" ]]; then
-                PACKS_TO_DEPLOY+="$PACK_URL "
-                echo "Adding '$PACK_NAME' to list of packs to deploy"
-              fi
-            fi
-          done
-
-          echo "PACKS_TO_DEPLOY=$PACKS_TO_DEPLOY" >> $GITHUB_ENV
-
       - name: Export pack, extract and commit to git
         run: |
           echo "Exporting pack '${{ inputs.pack }}' from worker group(s): ${{ inputs.worker_group }}"
           WG_ENDPOINT="$API_BASE_URI/$WORKER_GROUP/packs"
           curl -H "$AUTH_HEADER" $WG_ENDPOINT/${{ inputs.pack }}/export?mode=merge -o '${{ inputs.pack }}.crbl'
+
+          ls -lahrt
 
           echo "Extracting '${{ inputs.pack }}.crbl' to '${{ inputs.pack }}'"
           tar -xzf '${{ inputs.pack }}.crbl' -C '${{ inputs.pack }}'
