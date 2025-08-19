@@ -70,9 +70,11 @@ jobs:
         run: |
           echo "Exporting pack '${{ inputs.pack }}' from worker group(s): ${{ inputs.worker_group }}"
           WG_ENDPOINT="$API_BASE_URI/$WORKER_GROUP/packs"
-          curl -H "$AUTH_HEADER" $WG_ENDPOINT/${{ inputs.pack }}/export?mode=merge -o '${{ inputs.pack }}.crbl'
+          curl -v -H "$AUTH_HEADER" $WG_ENDPOINT/${{ inputs.pack }}/export?mode=merge -o '${{ inputs.pack }}.crbl'
 
           ls -lahrt
+
+          cat '${{ inputs.pack }}.crbl'
 
           echo "Extracting '${{ inputs.pack }}.crbl' to '${{ inputs.pack }}'"
           tar -xzf '${{ inputs.pack }}.crbl' -C '${{ inputs.pack }}'
