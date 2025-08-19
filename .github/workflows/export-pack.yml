@@ -13,6 +13,9 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: write
+
 jobs:
   export:
     runs-on: ubuntu-latest
@@ -79,5 +82,5 @@ jobs:
           git config --global user.name "GitHub Actions on behalf of $GITHUB_TRIGGERING_ACTOR"
           git config --global user.email "automation@cribl.io"
           git add '${{ inputs.pack }}'
-          git commit -m "Exported pack '${{ inputs.pack }}' from worker group(s): ${{ inputs.worker_group }}"
+          git commit -m "Exported pack '${{ inputs.pack }}' from worker group ${{ inputs.worker_group }}"
           git push origin HEAD
