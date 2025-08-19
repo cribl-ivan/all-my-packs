@@ -2,7 +2,7 @@ name: Deploy pack(s) to Cribl Worker Groups
 
 on:
   workflow_dispatch:
-    inputs:
+    inputs: &inputs
       worker_group:
         description: 'Worker group to deploy the pack to (space-separated list)'
         required: true
@@ -13,6 +13,8 @@ on:
         required: true
         default: '*'
         type: string
+  workflow_call:
+    inputs: *inputs
 
 jobs:
   deploy:
