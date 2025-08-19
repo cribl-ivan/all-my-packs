@@ -1,1 +1,9 @@
-{"version":"0.0.1","tags":{"streamtags":[]},"exports":[],"displayName":"test pack","name":"my-test-pack"}
+{
+  "version": "0.0.27",
+  "tags": {
+    "streamtags": []
+  },
+  "exports": [],
+  "displayName": "test pack",
+  "name": "my-test-pack"
+}
