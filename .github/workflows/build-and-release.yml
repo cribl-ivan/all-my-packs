@@ -33,7 +33,6 @@ jobs:
   deploy:
     uses: ./.github/workflows/deploy-pack.yml
     needs: build
-    environment: production
     with:
       packs: '*'
       worker_group: 'default'
