@@ -87,15 +87,17 @@ jobs:
           tar -xzf '${{ inputs.pack }}.crbl' -C '${{ inputs.pack }}'
           rm -f '${{ inputs.pack }}.crbl'
 
-          echo "Committing changes to '${{ inputs.pack }}'"
-          git config --global user.name "$GITHUB_TRIGGERING_ACTOR's Pack Exporter"
-          git config --global user.email "automation@cribl.io"
-          git add '${{ inputs.pack }}'
-          git commit -m "Exported pack '${{ inputs.pack }}' from worker group ${{ inputs.worker_group }}"
-          git push origin HEAD
+          if [[ -n "$(git status -s)" ]]; then
+            echo "Committing changes to '${{ inputs.pack }}'"
+            git config --global user.name "$GITHUB_TRIGGERING_ACTOR's Pack Exporter"
+            git config --global user.email "automation@cribl.io"
+            git add '${{ inputs.pack }}'
+            git commit -m "Exported pack '${{ inputs.pack }}' from worker group ${{ inputs.worker_group }}"
+            git push origin HEAD
+          fi
 
       - name: Raise Pull Request
-        if: ${{ inputs.raise_pr }} && !cancelled()
+        if: ${{ inputs.raise_pr }}
         uses: peter-evans/create-pull-request@v4
         with:
           title: "Exported pack '${{ inputs.pack }}' from worker group ${{ inputs.worker_group }}"
