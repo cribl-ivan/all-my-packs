@@ -1,0 +1,115 @@
+name: Deploy pack(s) to Cribl Worker Groups
+
+on:
+  workflow_dispatch:
+    inputs:
+      worker_group:
+        description: 'Worker group to export the pack from'
+        required: true
+        default: 'default'
+        type: string
+      pack:
+        description: 'Pack ID to export'
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: login to Cribl (on-prem)
+        if: ${{ vars.LEADER_BASE_URI }}
+        env:
+          PASSWORD: ${{ secrets.PACK_DEPLOYER_PASSWORD }}
+          LEADER_BASE_URI: ${{ vars.LEADER_BASE_URI }}
+        run: |
+          TOKEN=$(curl $LEADER_BASE_URI/api/v1/auth/login \
+               -H 'Content-Type: application/json' \
+               -d "{\"username\":\"pack_deployer\",\"password\":\"$PASSWORD\"}" 2>/dev/null | \
+               jq -r .token)
+          
+          # Set up the Authentication Header
+          echo "AUTH_HEADER=Authorization: Bearer $TOKEN" >> $GITHUB_ENV
+          echo "API_BASE_URI=$LEADER_BASE_URI/api/v1/m" >> $GITHUB_ENV
+
+      - name: login to Cribl (Cloud)
+        if: ${{ vars.CRIBL_CLIENT_ID && vars.CRIBL_ORG }}
+        env:
+          CRIBL_CLIENT_SECRET: ${{ secrets.CRIBL_CLIENT_SECRET }}
+          CRIBL_CLIENT_ID: ${{ vars.CRIBL_CLIENT_ID }}
+          CRIBL_ORG: ${{ vars.CRIBL_ORG }}
+        run: |
+          AUTH_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "https://login.cribl.cloud/oauth/token" \
+                          -H "Content-Type: application/json" \
+                          -d "{\"grant_type\": \"client_credentials\",\"client_id\": \"$CRIBL_CLIENT_ID\", \"client_secret\": \"$CRIBL_CLIENT_SECRET\", \"audience\": \"https://api.cribl.cloud\"}" \
+                          || exit 1)
+          
+          AUTH_HTTP_CODE=$(echo "$AUTH_RESPONSE" | tail -n1)
+          ACCESS_TOKEN=$(echo "$AUTH_RESPONSE" | sed '$d' | jq -r '.access_token')
+          
+          # Checks if the authentication request was successful
+          if [ "$AUTH_HTTP_CODE" -eq 200 ]; then
+            echo "Request succeeded with status code $AUTH_HTTP_CODE."
+            echo "----------------------------------------"
+          else
+            echo "Request failed with status code $AUTH_HTTP_CODE."
+            echo "----------------------------------------"
+            # Exit on the first non-200 response
+            exit 1
+          fi
+
+          # Set up the Authentication Header
+          echo "AUTH_HEADER=Authorization: Bearer $ACCESS_TOKEN" >> $GITHUB_ENV
+          echo "API_BASE_URI=https://$CRIBL_ORG.cribl.cloud/api/v1/m" >> $GITHUB_ENV
+
+      - name: Get list of pack asset URLs from release
+        id: get_pack_urls
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RELEASE_RESP=$(curl -L -s -w "\n%{http_code}" \
+                        -H "Accept: application/vnd.github+json" \
+                        -H "Authorization: Bearer $GITHUB_TOKEN" \
+                        -H "X-GitHub-Api-Version: 2022-11-28" \
+                        $GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases/tags/$GITHUB_REF_NAME \
+                        || exit 1)
+          RELEASE_HTTP_CODE=$(echo "$RELEASE_RESP" | tail -n1)
+          RELEASE_RESPONSE_BODY=$(echo "$RELEASE_RESP" | sed '$d')
+
+          for PACK_URL in $(echo "$RELEASE_RESPONSE_BODY" | jq -r '.assets[] | select(.name | endswith(".crbl")) | .browser_download_url'); do
+            PACK_NAME=$(basename "$PACK_URL" .crbl)
+
+            echo "Pack URL for '$PACK_NAME': $PACK_URL"
+            
+            if [ '${{ inputs.packs }}' == '*' ]; then
+              PACKS_TO_DEPLOY+="$PACK_URL "
+              echo "Adding '$PACK_NAME' to list of packs to deploy"
+            else
+              if [[ "${{ inputs.packs }}" =~ "$PACK_NAME" ]]; then
+                PACKS_TO_DEPLOY+="$PACK_URL "
+                echo "Adding '$PACK_NAME' to list of packs to deploy"
+              fi
+            fi
+          done
+
+          echo "PACKS_TO_DEPLOY=$PACKS_TO_DEPLOY" >> $GITHUB_ENV
+
+      - name: Export pack, extract and commit to git
+        run: |
+          echo "Exporting pack '${{ inputs.pack }}' from worker group(s): ${{ inputs.worker_group }}"
+          WG_ENDPOINT="$API_BASE_URI/$WORKER_GROUP/packs"
+          curl -H "$AUTH_HEADER" $WG_ENDPOINT/${{ inputs.pack }}/export?mode=merge -o '${{ inputs.pack }}.crbl'
+
+          echo "Extracting '${{ inputs.pack }}.crbl' to '${{ inputs.pack }}'"
+          tar -xzf '${{ inputs.pack }}.crbl' -C '${{ inputs.pack }}'
+
+          echo "Committing changes to '${{ inputs.pack }}'"
+          git config --global user.name "GitHub Actions on behalf of $GITHUB_TRIGGERING_ACTOR"
+          git config --global user.email "automation@cribl.io"
+          git add '${{ inputs.pack }}'
+          git commit -m "Exported pack '${{ inputs.pack }}' from worker group(s): ${{ inputs.worker_group }}"
+          git push origin HEAD
