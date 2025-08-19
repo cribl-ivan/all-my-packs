@@ -95,10 +95,14 @@ jobs:
             git commit --author='${{ github.actor }} <${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com>' \
                        -m "Exported pack '${{ inputs.pack }}' from worker group ${{ inputs.worker_group }}"
             git push origin HEAD
+          else
+            echo "No changes to commit for '${{ inputs.pack }}'"
           fi
 
       - name: Raise Pull Request
         if: ${{ inputs.raise_pr }}
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           echo "Raising a Pull Request for exported pack '${{ inputs.pack }}'"
           gh pr create \
