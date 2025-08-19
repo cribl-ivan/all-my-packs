@@ -104,10 +104,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          echo "Raising a Pull Request for exported pack '${{ inputs.pack }}'"
-          gh pr create \
-            --title "Exported pack '${{ inputs.pack }}' from worker group ${{ inputs.worker_group }}" \
-            --body "This PR contains the exported pack '${{ inputs.pack }}' from worker group ${{ inputs.worker_group }}." \
-            --base main \
-            --head ${{ github.ref_name }} \
-            --draft
+          echo "Check if Pull Request already exists for '${{ inputs.pack }}'"
+          PR_EXISTS=$(gh pr list --search "Exported pack '${{ inputs.pack }}' from worker group ${{ inputs.worker_group }}" --json number --jq '.[0].number' || echo "0")
+          if [[ "$PR_EXISTS" != "0" ]]; then
+            echo "Pull Request already exists: #$PR_EXISTS"
+          else
+            echo "Raising a Pull Request for exported pack '${{ inputs.pack }}'"
+            gh pr create \
+              --title "Exported pack '${{ inputs.pack }}' from worker group ${{ inputs.worker_group }}" \
+              --body "This PR contains the exported pack '${{ inputs.pack }}' from worker group ${{ inputs.worker_group }}." \
+              --base main \
+              --head ${{ github.ref_name }} \
+              --draft
+          fi
