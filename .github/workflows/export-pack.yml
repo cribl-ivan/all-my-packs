@@ -1,4 +1,4 @@
-name: Deploy pack(s) to Cribl Worker Groups
+name: Export pack from Cribl Worker Groups
 
 on:
   workflow_dispatch:
