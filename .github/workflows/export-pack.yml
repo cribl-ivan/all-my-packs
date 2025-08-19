@@ -12,9 +12,15 @@ on:
         description: 'Pack ID to export'
         required: true
         type: string
+      raise_pr:
+        description: 'Raise a Pull Request with the exported pack?'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   export:
@@ -75,12 +81,24 @@ jobs:
           WG_ENDPOINT="$API_BASE_URI/${{ inputs.worker_group }}/packs"
           curl -H "$AUTH_HEADER" $WG_ENDPOINT/${{ inputs.pack }}/export?mode=merge -o '${{ inputs.pack }}.crbl'
 
+          mkdir -p '${{ inputs.pack }}'
+
           echo "Extracting '${{ inputs.pack }}.crbl' to '${{ inputs.pack }}'"
           tar -xzf '${{ inputs.pack }}.crbl' -C '${{ inputs.pack }}'
 
           echo "Committing changes to '${{ inputs.pack }}'"
-          git config --global user.name "GitHub Actions on behalf of $GITHUB_TRIGGERING_ACTOR"
+          git config --global user.name "$GITHUB_TRIGGERING_ACTOR's Pack Exporter"
           git config --global user.email "automation@cribl.io"
           git add '${{ inputs.pack }}'
           git commit -m "Exported pack '${{ inputs.pack }}' from worker group ${{ inputs.worker_group }}"
           git push origin HEAD
+
+      - name: Raise Pull Request
+        if: ${{ inputs.raise_pr }}
+        uses: peter-evans/create-pull-request@v4
+        with:
+          title: "Exported pack '${{ inputs.pack }}' from worker group ${{ inputs.worker_group }}"
+          body: "This PR contains the exported pack '${{ inputs.pack }}' from worker group ${{ inputs.worker_group }}."
+          branch: $GITHUB_REF_NAME
+          base: main
+          draft: true
