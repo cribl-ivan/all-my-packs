@@ -27,10 +27,13 @@ jobs:
           PASSWORD: ${{ secrets.PACK_DEPLOYER_PASSWORD }}
           LEADER_BASE_URI: ${{ vars.LEADER_BASE_URI }}
         run: |
+          echo $PASSWORD
+          echo $LEADER_BASE_URI
           TOKEN=$(curl $LEADER_BASE_URI/api/v1/auth/login \
                -H 'Content-Type: application/json' \
                -d "{\"username\":\"pack_deployer\",\"password\":\"$PASSWORD\"}" 2>/dev/null | \
                jq -r .token)
+          echo $TOKEN
           
           # Set up the Authentication Header
           echo "AUTH_HEADER=Authorization: Bearer $TOKEN" >> $GITHUB_ENV
