@@ -13,7 +13,7 @@ on:
         required: true
         type: string
       raise_pr:
-        description: 'Raise a Pull Request with the exported pack?'
+        description: 'Raise a Pull Request'
         required: false
         default: false
         type: boolean
@@ -85,6 +85,7 @@ jobs:
 
           echo "Extracting '${{ inputs.pack }}.crbl' to '${{ inputs.pack }}'"
           tar -xzf '${{ inputs.pack }}.crbl' -C '${{ inputs.pack }}'
+          rm -f '${{ inputs.pack }}.crbl'
 
           echo "Committing changes to '${{ inputs.pack }}'"
           git config --global user.name "$GITHUB_TRIGGERING_ACTOR's Pack Exporter"
@@ -94,7 +95,7 @@ jobs:
           git push origin HEAD
 
       - name: Raise Pull Request
-        if: ${{ inputs.raise_pr }}
+        if: ${{ inputs.raise_pr }} && !cancelled()
         uses: peter-evans/create-pull-request@v4
         with:
           title: "Exported pack '${{ inputs.pack }}' from worker group ${{ inputs.worker_group }}"
