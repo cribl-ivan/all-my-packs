@@ -1,4 +1,4 @@
-name: Main
+name: Build & Release Packs
 
 on:
   push:
@@ -30,5 +30,8 @@ jobs:
           files: |
             *.crbl
 
-      - run: |
-          echo '${{ toJSON(steps.release.outputs) }}'
+      - name: Deploy
+        uses: ./.github/workflows/deploy-pack.yml
+        with:
+          packs: '*'
+          worker_group: 'default'
