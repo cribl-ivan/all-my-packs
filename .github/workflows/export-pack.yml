@@ -106,7 +106,7 @@ jobs:
         run: |
           echo "Check if Pull Request already exists for '${{ inputs.pack }}'"
           PR_EXISTS=$(gh pr list --search "Exported pack '${{ inputs.pack }}' from worker group ${{ inputs.worker_group }}" --json number --jq '.[0].number' || echo "0")
-          if [[ "$PR_EXISTS" != "0" ]]; then
+          if [[ -n "$PR_EXISTS" ]]; then
             echo "Pull Request already exists: #$PR_EXISTS"
           else
             echo "Raising a Pull Request for exported pack '${{ inputs.pack }}'"
