@@ -81,6 +81,11 @@ jobs:
           WG_ENDPOINT="$API_BASE_URI/${{ inputs.worker_group }}/packs"
           curl -H "$AUTH_HEADER" $WG_ENDPOINT/${{ inputs.pack }}/export?mode=merge -o '${{ inputs.pack }}.crbl'
 
+          if [ -d '${{ inputs.pack }}' ]; then
+            echo "Directory '${{ inputs.pack }}' already exists, removing it."
+            rm -rf '${{ inputs.pack }}'
+          fi
+
           mkdir -p '${{ inputs.pack }}'
 
           echo "Extracting '${{ inputs.pack }}.crbl' to '${{ inputs.pack }}'"
