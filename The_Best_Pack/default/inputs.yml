@@ -1,0 +1,23 @@
+inputs:
+  splunk_source:
+    disabled: false
+    sendToRoutes: true
+    pqEnabled: false
+    streamtags: []
+    host: 0.0.0.0
+    tls:
+      disabled: true
+    ipWhitelistRegex: /.*/
+    maxActiveCxn: 1000
+    socketIdleTimeout: 0
+    socketEndingMaxWait: 30
+    socketMaxLifespan: 0
+    enableProxyHeader: false
+    staleChannelFlushMs: 10000
+    maxS2Sversion: v4
+    useFwdTimezone: true
+    dropControlFields: true
+    extractMetrics: false
+    compress: disabled
+    type: splunk
+    port: 12343
