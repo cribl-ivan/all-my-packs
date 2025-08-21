@@ -124,3 +124,18 @@ jobs:
               --head ${{ github.ref_name }} \
               --draft
           fi
+
+      # This is required to trigger the pipeline in the MR, since a push from the action does not trigger the pipeline
+      # See: https://github.com/peter-evans/create-pull-request/blob/main/docs/concepts-guidelines.md#triggering-further-workflow-runs
+      - name: Close & Reopen MR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Closing and reopening the MR to trigger the pipeline"
+          PR_NUMBER=$(gh pr list --search "Exported pack '${{ inputs.pack }}' from worker group ${{ inputs.worker_group }}" --json number --jq '.[0].number')
+          if [[ -n "$PR_NUMBER" ]]; then
+            gh pr close $PR_NUMBER
+            gh pr reopen $PR_NUMBER
+          else
+            echo "No open PR found for '${{ inputs.pack }}'"
+          fi
