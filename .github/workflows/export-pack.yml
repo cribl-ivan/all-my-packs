@@ -9,7 +9,7 @@ on:
         default: 'default'
         type: string
       pack:
-        description: 'Pack ID to export'
+        description: 'Pack ID to export (space-separated list)'
         required: true
         type: string
       raise_pr:
@@ -77,27 +77,34 @@ jobs:
 
       - name: Export pack, extract and commit to git
         run: |
-          echo "Exporting pack '${{ inputs.pack }}' from worker group(s): ${{ inputs.worker_group }}"
-          WG_ENDPOINT="$API_BASE_URI/${{ inputs.worker_group }}/packs"
-          curl -H "$AUTH_HEADER" $WG_ENDPOINT/${{ inputs.pack }}/export?mode=merge -o '${{ inputs.pack }}.crbl'
+          for PACK in ${{ inputs.pack }}; do
+            echo "Exporting pack '$PACK' from worker group(s): ${{ inputs.worker_group }}"
+            WG_ENDPOINT="$API_BASE_URI/${{ inputs.worker_group }}/packs"
+            curl -H "$AUTH_HEADER" $WG_ENDPOINT/$PACK/export?mode=merge -o "$PACK.crbl"
 
-          mkdir -p '${{ inputs.pack }}'
+            if [ -d "$PACK" ]; then
+              echo "Directory '$PACK' already exists, removing it."
+              rm -rf "$PACK"
+            fi
 
-          echo "Extracting '${{ inputs.pack }}.crbl' to '${{ inputs.pack }}'"
-          tar -xzf '${{ inputs.pack }}.crbl' -C '${{ inputs.pack }}'
-          rm -f '${{ inputs.pack }}.crbl'
+            mkdir -p "$PACK"
 
-          if [[ -n "$(git status -s)" ]]; then
-            echo "Committing changes to '${{ inputs.pack }}'"
-            git config --global user.name "$GITHUB_TRIGGERING_ACTOR's Pack Exporter"
-            git config --global user.email "automation@cribl.io"
-            git add '${{ inputs.pack }}'
-            git commit --author='${{ github.actor }} <${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com>' \
-                       -m "Exported pack '${{ inputs.pack }}' from worker group ${{ inputs.worker_group }}"
-            git push origin HEAD
-          else
-            echo "No changes to commit for '${{ inputs.pack }}'"
-          fi
+            echo "Extracting '$PACK.crbl' to '$PACK'"
+            tar -xzf "$PACK.crbl" -C "$PACK"
+            rm -f "$PACK.crbl"
+
+            if [[ -n "$(git status -s)" ]]; then
+              echo "Committing changes to '$PACK'"
+              git config --global user.name "$GITHUB_TRIGGERING_ACTOR's Pack Exporter"
+              git config --global user.email "automation@cribl.io"
+              git add "$PACK"
+              git commit --author='${{ github.actor }} <${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com>' \
+                        -m "Exported pack '$PACK' from worker group ${{ inputs.worker_group }}"
+              git push origin HEAD
+            else
+              echo "No changes to commit for '$PACK'"
+            fi
+          done
 
       - name: Raise Pull Request
         if: ${{ inputs.raise_pr }}
@@ -105,7 +112,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           echo "Check if Pull Request already exists for '${{ inputs.pack }}'"
-          PR_EXISTS=$(gh pr list --search "Exported pack '${{ inputs.pack }}' from worker group ${{ inputs.worker_group }}" --json number --jq '.[0].number' || echo "0")
+          PR_EXISTS=$(gh pr list --state open --head ${{ github.ref_name }} --json number --jq '.[0].number')
           if [[ -n "$PR_EXISTS" ]]; then
             echo "Pull Request already exists: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/pull/$PR_EXISTS"
           else

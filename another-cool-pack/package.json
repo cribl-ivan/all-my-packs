@@ -1,9 +1,1 @@
-{
-  "version": "0.0.27",
-  "tags": {
-    "streamtags": []
-  },
-  "exports": [],
-  "displayName": "the coolest pack ever",
-  "name": "another-cool-pack"
-}
+{"name":"another-cool-pack","version":"0.0.27","author":"author","description":"description","displayName":"the coolest pack ever","tags":{"streamtags":[]},"exports":[]}

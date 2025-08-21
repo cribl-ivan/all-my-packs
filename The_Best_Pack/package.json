@@ -1,1 +1,1 @@
-{"version":"0.0.1","tags":{"streamtags":[]},"exports":[],"displayName":"The Best Pack","name":"The_Best_Pack","minLogStreamVersion":"4.12.0"}
+{"name":"The_Best_Pack","version":"0.0.1","author":"author","description":"description","displayName":"The Best Pack","tags":{"streamtags":[]},"exports":[],"minLogStreamVersion":"4.12.0"}
