@@ -80,7 +80,7 @@ jobs:
           for PACK in ${{ inputs.pack }}; do
             echo "Exporting pack '$PACK' from worker group(s): ${{ inputs.worker_group }}"
             WG_ENDPOINT="$API_BASE_URI/${{ inputs.worker_group }}/packs"
-            curl -H "$AUTH_HEADER" $WG_ENDPOINT/$PACK/export?mode=merge -o '$PACK.crbl'
+            curl -H "$AUTH_HEADER" $WG_ENDPOINT/$PACK/export?mode=merge -o "$PACK.crbl"
 
             if [ -d "$PACK" ]; then
               echo "Directory '$PACK' already exists, removing it."
