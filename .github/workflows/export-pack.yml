@@ -82,22 +82,22 @@ jobs:
             WG_ENDPOINT="$API_BASE_URI/${{ inputs.worker_group }}/packs"
             curl -H "$AUTH_HEADER" $WG_ENDPOINT/$PACK/export?mode=merge -o '$PACK.crbl'
 
-            if [ -d '$PACK' ]; then
+            if [ -d "$PACK" ]; then
               echo "Directory '$PACK' already exists, removing it."
-              rm -rf '$PACK'
+              rm -rf "$PACK"
             fi
 
-            mkdir -p '$PACK'
+            mkdir -p "$PACK"
 
             echo "Extracting '$PACK.crbl' to '$PACK'"
-            tar -xzf '$PACK.crbl' -C '$PACK'
-            rm -f '$PACK.crbl'
+            tar -xzf "$PACK.crbl" -C "$PACK"
+            rm -f "$PACK.crbl"
 
             if [[ -n "$(git status -s)" ]]; then
               echo "Committing changes to '$PACK'"
               git config --global user.name "$GITHUB_TRIGGERING_ACTOR's Pack Exporter"
               git config --global user.email "automation@cribl.io"
-              git add '$PACK'
+              git add "$PACK"
               git commit --author='${{ github.actor }} <${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com>' \
                         -m "Exported pack '$PACK' from worker group ${{ inputs.worker_group }}"
               git push origin HEAD
