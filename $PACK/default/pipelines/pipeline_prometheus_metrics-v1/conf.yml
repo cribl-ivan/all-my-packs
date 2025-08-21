@@ -1,3 +1,7 @@
+output: default
+streamtags:
+  - tag
+groups: {}
 functions:
   - id: comment
     filter: "true"
@@ -31,8 +35,4 @@ functions:
       removeMetrics: []
       removeDimensions:
         - host
-groups: {}
-output: default
 description: Prepare Events headed to Prometheus
-streamtags:
-  - tag
