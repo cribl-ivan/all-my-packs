@@ -34,3 +34,5 @@ functions:
 groups: {}
 output: default
 description: Prepare Events headed to Prometheus
+streamtags:
+  - tags
