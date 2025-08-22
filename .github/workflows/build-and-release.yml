@@ -17,7 +17,7 @@ jobs:
       - name: Build
         run: |
           for PACK in $(ls); do
-            if [ ! "$PACK" = "tests" ]; then
+            if [ ! "$PACK" = "tests" && -d "$PACK" ]; then
               echo "Building $PACK"
               jq ".version |= \"$(echo $GITHUB_REF_NAME | sed 's/v//')\"" $PACK/package.json > $PACK/package.json.tmp
               mv $PACK/package.json.tmp $PACK/package.json
