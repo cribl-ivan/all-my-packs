@@ -13,3 +13,14 @@ routes:
     filter: "true"
     clones: []
     output: syslog
+  - id: 4QgQ9N
+    name: test_route
+    final: true
+    disabled: false
+    pipeline: passthru
+    description: ""
+    enableOutputExpression: false
+    outputExpression: null
+    filter: "true"
+    clones: []
+    output: default
